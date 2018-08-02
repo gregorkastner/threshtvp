@@ -1,0 +1,3 @@
+useDynLib(threshtvp)
+exportPattern("^[[:alpha:]]+")
+importFrom(Rcpp, evalCpp)
