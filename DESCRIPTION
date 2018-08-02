@@ -1,16 +1,14 @@
 Package: threshtvp
-Type: Package
-Title: Estimation of time-varying parameter models with time-varying
-        sparsity
-Version: 0.2
-Author: Florian Huber
-Maintainer: Florian Huber <fhuber7@gmail.com>
+Title: Bayesian Estimation of (Threshold) Time-Varying Parameter Models
+Version: 0.3
+Authors@R: as.person(c(
+    "Florian Huber <fhuber7@gmail.com> [aut, cre]", 
+    "Gregor Kastner <gregor.kastner@wu.ac.at> [aut]"))
 Depends: R (>= 3.1.0), stochvol, GIGrvg, MASS, dlm
-Description: Estimation of TVP models with time-varying inclusion probabilities
-    and time-varying shrinkage on parameter dynamics.
+Description: Inference in dynanmic regression models and threshold time-varying
+    parameter vector autoregressions (TTVP-VARs) with mixture innovation
+    components for each coefficient in the system.
 License: GPL (>= 2)
 Imports: Rcpp (>= 0.11.6)
 LinkingTo: Rcpp, RcppArmadillo
-RoxygenNote: 5.0.1
 NeedsCompilation: yes
-Packaged: 2018-07-24 10:46:09 UTC; florianhuber
