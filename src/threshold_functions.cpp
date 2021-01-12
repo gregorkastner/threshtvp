@@ -122,7 +122,7 @@ List KF(NumericMatrix y, NumericMatrix Z,NumericMatrix Ht, NumericMatrix Qtt,int
     btt=trans(bt.row(t-i-1));
     Vtt=test.slice(t-i-1);
     f=Vtt+Qt;
-    inv_f=solve(f.t(),Vtt.t(), "std").t();
+    inv_f=arma::solve(f.t(),Vtt.t()).t();
   
     cfe=bf-btt;
     //bmean=btt+Vtt*inv_f*cfe;
