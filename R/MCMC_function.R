@@ -97,11 +97,17 @@ MCMC_tvp <- function(Y,X,nburn,nsave,priorbtheta=list(B_1=2,B_2=1,kappa0=1e-07),
     d <- d_prior  <- matrix(0,K_,1)
     D_t <- matrix(1,K_,T)
     Omega_t <- matrix(1,K_,T)
-    svdraw <- list(para=c(mu=-10,phi=.9,sigma=.2),latent=rep(-3,T))
+    svdraw <- list(para=c(mu=-10,phi=.9,sigma=.2,latent0=-10),latent=rep(-3,T))
     hv <- svdraw$latent
     para <- list(mu=-10,phi=.9,sigma=.2)
     H <- matrix(-10,T,M)
     thin_out <- round(seq(nburn,ntot,length.out = thin*nsave))
+    
+    ## NEW: stochvol
+    a0 <- priorphi[1]; b0 <- priorphi[2]
+    bmu <- priormu[1]; Bmu <- priormu[2]
+    Bsigma <- 1
+    Sv_priors <- specify_priors(mu=sv_normal(mean=bmu, sd=Bmu), phi=sv_beta(a0,b0), sigma2=sv_gamma(shape=0.5,rate=1/(2*Bsigma)))
   
     #storage matrices
     H_store <- matrix(NA,thin*nsave,T)
@@ -224,8 +230,18 @@ MCMC_tvp <- function(Y,X,nburn,nsave,priorbtheta=list(B_1=2,B_2=1,kappa0=1e-07),
         
         if (sv_on){
             #-------------------------if sv_on==TRUE -> use stochastic volatility specification-------------------------#
-            svdraw <- svsample2(u_,startpara=para(svdraw),startlatent=latent(svdraw),priorphi=priorphi,priormu=priormu)#,priorlatent0=h0prior
-            hv <- latent(svdraw)
+            para <- as.list(svdraw$para); names(para) <- c("mu","phi","sigma","latent0")
+            para$nu = Inf; para$rho=0; para$beta<-0
+            temp <- svsample_fast_cpp(y=u_, draws=1, burnin=0, designmatrix=matrix(NA_real_),
+                                      priorspec=Sv_priors, thinpara=1, thinlatent=1, keeptime="all",
+                                      startpara=para, startlatent=svdraw$latent,
+                                      keeptau=FALSE, print_settings=list(quiet=TRUE, n_chains=1, chain=1),
+                                      correct_model_misspecification=FALSE, interweave=TRUE, myoffset=0,
+                                      fast_sv=default_fast_sv)
+            hv <- temp$latent[1,]
+            svdraw$para <- c(temp$para[1,c("mu","phi","sigma")],temp$latent0[1,"h_0"])
+            names(svdraw$para)[4] <- "latent0"
+            svdraw$latent <- as.numeric(temp$latent)
             sig_eta <- 0
         }else{
             S_1 <- a_sig+T/2
@@ -239,7 +255,7 @@ MCMC_tvp <- function(Y,X,nburn,nsave,priorbtheta=list(B_1=2,B_2=1,kappa0=1e-07),
             kappa_store[ithin,] <- scale.0
             H_store[ithin,] <- hv
             ALPHA_store[ithin,,] <- t(ALPHA)
-            svparms_store[ithin,] <- para(svdraw)
+            svparms_store[ithin,] <- svdraw$para[c("mu","phi","sigma")]
             D_store[ithin,,] <- D_t
             thresholds_store[ithin,] <- d
             omega_store[ithin,] <-diag(sqrttheta1)
@@ -438,6 +454,13 @@ MCMC_mix <- function(Y,X,nburn,nsave,priorbtheta=list(B_1=2,B_2=1,kappa0=1e-07),
   H <- matrix(-10,T,M)
   thin_out <- round(seq(nburn,ntot,length.out = thin*nsave))
   kprior <- .5*matrix(1,2,1)
+  
+  ## NEW: stochvol
+  a0 <- priorphi[1]; b0 <- priorphi[2]
+  bmu <- priormu[1]; Bmu <- priormu[2]
+  Bsigma <- 1
+  Sv_priors <- specify_priors(mu=sv_normal(mean=bmu, sd=Bmu), phi=sv_beta(a0,b0), sigma2=sv_gamma(shape=0.5,rate=1/(2*Bsigma)))
+  
   #storage matrices
   H_store <- matrix(NA,thin*nsave,T)
   ALPHA_store <- array(NA,c(thin*nsave,T,K_))
@@ -525,8 +548,18 @@ MCMC_mix <- function(Y,X,nburn,nsave,priorbtheta=list(B_1=2,B_2=1,kappa0=1e-07),
     
     if (sv_on){
       #-------------------------if sv_on==TRUE -> use stochastic volatility specification-------------------------#
-      svdraw <- svsample2(u_,startpara=para(svdraw),startlatent=latent(svdraw),priorphi=priorphi,priormu=priormu)#,priorlatent0=h0prior
-      hv <- latent(svdraw)
+      para <- as.list(svdraw$para); names(para) <- c("mu","phi","sigma","latent0")
+      para$nu = Inf; para$rho=0; para$beta<-0
+      temp <- svsample_fast_cpp(y=u_, draws=1, burnin=0, designmatrix=matrix(NA_real_),
+                                priorspec=Sv_priors, thinpara=1, thinlatent=1, keeptime="all",
+                                startpara=para, startlatent=svdraw$latent,
+                                keeptau=FALSE, print_settings=list(quiet=TRUE, n_chains=1, chain=1),
+                                correct_model_misspecification=FALSE, interweave=TRUE, myoffset=0,
+                                fast_sv=default_fast_sv)
+      hv <- temp$latent[1,]
+      svdraw$para <- c(temp$para[1,c("mu","phi","sigma")],temp$latent0[1,"h_0"])
+      names(svdraw$para)[4] <- "latent0"
+      svdraw$latent <- as.numeric(temp$latent)
       sig_eta <- 0
     }else{
       S_1 <- a_sig+T/2
@@ -539,7 +572,7 @@ MCMC_mix <- function(Y,X,nburn,nsave,priorbtheta=list(B_1=2,B_2=1,kappa0=1e-07),
       #Vcov_store[ithin,,,] <- VCOV
       H_store[ithin,] <- hv
       ALPHA_store[ithin,,] <- t(ALPHA)
-      svparms_store[ithin,] <- para(svdraw)
+      svparms_store[ithin,] <- svdraw$para[c("mu","phi","sigma")]
       D_store[ithin,,] <- D_t
       thresholds_store[ithin,] <- d
       omega_store[ithin,] <-diag(sqrttheta1)
